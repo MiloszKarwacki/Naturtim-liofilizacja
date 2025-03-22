@@ -1,0 +1,225 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ========================================================================================================================================================
+// SYSTEM I UŻYTKOWNICY - zarządzanie użytkownikami i logowanie zdarzeń
+// ========================================================================================================================================================
+
+model User {
+  id Int @id @default(autoincrement())
+
+  //logowanie
+  login    String @unique
+  password String
+
+  //osoba
+  username    String @default("default_username")
+  userSurname String @default("default_surname")
+
+  //daty tworzenia i aktualizacji
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  //dostepy
+  permissions Permission[] @relation("UserPermissions")
+}
+
+//MODEL DOSTĘPU DO RÓŻNYCH MODUŁÓW
+model Permission {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  href        String
+  description String
+  users       User[] @relation("UserPermissions")
+}
+
+// ========================================================================================================================================================
+// MODELE PODSTAWOWE (SŁOWNIKI) - dane referencyjne
+// ========================================================================================================================================================
+
+model Product {
+  id                Int               @id @default(autoincrement())
+  name              String
+  productionBatches ProductionBatch[]
+}
+
+model Supplier {
+  id                Int               @id @default(autoincrement())
+  name              String
+  productionBatches ProductionBatch[]
+}
+
+model Recipient {
+  id                Int               @id @default(autoincrement())
+  name              String
+  productionBatches ProductionBatch[]
+}
+
+model Machine {
+  id                Int               @id @default(autoincrement())
+  name              String
+  color             String
+  productionBatches ProductionBatch[]
+}
+
+model Fraction {
+  id                 Int                 @id @default(autoincrement())
+  name               String              @unique
+  batchFractions     BatchFraction[]
+  warehouseFractions WarehouseFraction[]
+}
+
+// ========================================================================================================================================================
+// MODELE GŁÓWNE - operacje biznesowe
+// ========================================================================================================================================================
+
+model ProductionBatch {
+  id Int @id @default(autoincrement())
+
+  // ============================== ETAP 1: Przyjęcie dostawy ==============================
+
+  //Nadanie numeru partii (automatycznie)
+  batchNumber String @unique
+
+  // Produkt
+  product   Product? @relation(fields: [productId], references: [id])
+  productId Int?
+
+  // Dostawca
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  supplierId Int?
+
+  // Odbiorca
+  recipient   Recipient? @relation(fields: [recipientId], references: [id])
+  recipientId Int?
+
+  // Data przyjęcia
+  deliveryDate DateTime? // Data przyjęcia dostawy
+
+  // Waga początkowa
+  initialWeight Float? // Waga początkowa przy przyjęciu
+
+  // Automatyczne umieszczenie w magazynie mroźni
+  mroznia Float? @default(0) // Aktualna waga w magazynie mroźni
+
+  // Dodatkowe informacje
+  notes String? // Notatki dotyczące przyjecia dostawy
+
+  // ============================== ETAP 2: Harmonogram liofilizacji ==============================
+
+  // Przypisanie maszyny
+  machine   Machine? @relation(fields: [machineId], references: [id])
+  machineId Int?
+
+  // Planowanie procesu
+  processPlannedStartDate DateTime? // Planowana data rozpoczęcia z harmonogramu
+  processPlannedEndDate   DateTime? // Planowana data zakończenia z harmonogramu
+
+  // ============================== ETAP 3: Proces liofilizacji ==============================
+
+  // Faktyczne daty procesu
+  processStartDate DateTime? // Faktyczna data rozpoczęcia procesu
+  processEndDate   DateTime? // Faktyczna data zakończenia procesu
+
+  // Wagi procesu
+  processInputWeight  Float? // Waga wprowadzona do procesu
+  processOutputWeight Float? // Waga po liofilizacji
+  suchaMasa           Float? @default(0) // Wyliczona sucha masa
+
+  // Półprodukt po liofilizacji, przed podziałem na frakcje
+  polprodukt Float? @default(0) // Waga półproduktu po liofilizacji (przed frakcjonowaniem) (DO USUNIECIA!) ************
+
+  // ============================== ETAP 4: Podział na frakcje ==============================
+
+  // Relacja z frakcjami
+  fractionItems BatchFraction[] // Przypisane frakcje dla tej partii
+
+  // ============================== ETAP 5: Kontrola jakości i produkt końcowy ==============================
+
+  // Suma wszystkich gotowych produktów po kontroli jakości
+  gotowyProdukt Float? @default(0) // Łączna waga wszystkich frakcji w magazynie produktów gotowych (DO USUNIECIA!) ************
+
+  // Liczba/waga kartonów do wysyłki
+  kartony Float? @default(0)
+
+  // ============================== ETAP 6: Obsługa zamówień ==============================
+
+  warehouseFractions WarehouseFraction[]
+}
+
+// Model do obsługi frakcji przypisanych do partii
+model BatchFraction {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  // Powiązanie z partią
+  batch   ProductionBatch @relation(fields: [batchId], references: [id])
+  batchId Int
+
+  // Powiązanie z frakcją
+  fraction   Fraction @relation(fields: [fractionId], references: [id])
+  fractionId Int
+
+  // Wagi dla frakcji w różnych magazynach
+  polproduktWeight    Float @default(0) // Ile tej frakcji jest w półproduktach
+  gotowyProduktWeight Float @default(0) // Ile tej frakcji jest w gotowych produktach
+
+  // Waga odpadów z tej frakcji (po kontroli jakości)
+  wasteWeight Float @default(0)
+
+  // Data kontroli jakości dla tej frakcji
+  qualityControlDate DateTime?
+
+  @@unique([batchId, fractionId])
+}
+
+// ========================================================================================================================================================
+// 📝 Logowanie zdarzeń - śledzenie wszystkich działań użytkowników
+// ========================================================================================================================================================
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  timestamp   DateTime @default(now())
+  userId      Int
+  userName    String // Imię i nazwisko użytkownika
+  description String // Np. "Dodał dostawę ABC123", "Zmienił status partii z X na Y"
+  details     String? // Opcjonalne szczegóły jako JSON (jeśli potrzebne)
+}
+
+// ========================================================================================================================================================
+// 📝 Magazyny - przechowywanie frakcji w magazynach
+// ========================================================================================================================================================
+
+model Warehouse {
+  id                 Int                 @id @default(autoincrement())
+  name               String              @unique
+  description        String?
+  totalWeight        Float               @default(0)
+  lastInventoryDate  DateTime            @default(now())
+  warehouseFractions WarehouseFraction[]
+
+  @@map("warehouses")
+}
+
+model WarehouseFraction {
+  id                Int   @id @default(autoincrement())
+  warehouseId       Int
+  fractionId        Int
+  productionBatchId Int?
+  weight            Float @default(0)
+
+  warehouse       Warehouse        @relation(fields: [warehouseId], references: [id])
+  fraction        Fraction         @relation(fields: [fractionId], references: [id])
+  productionBatch ProductionBatch? @relation(fields: [productionBatchId], references: [id])
+
+  @@map("warehouse_fractions")
+}

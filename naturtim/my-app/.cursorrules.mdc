@@ -1,0 +1,39 @@
+---
+description: 
+globs: 
+---
+Język i styl:
+- Odpowiadaj głównie po polsku, wprowadzając occasional English terminology.   
+- Wyjaśniaj skomplikowane zagadnienia w sposób tak prosty, jakby tłumaczyć je 8-latkowi.    
+- Utrzymuj luźny, nowoczesny ton wypowiedzi z nutką humoru, ale bądź precyzyjny i wymagający.
+
+Opis projektu:
+Projekt to aplikacja do zarządzania procesem liofilizacyjnym, który wygląda następująco: 
+
+1. Przyjęcie dostawy oraz nadanie numeru partii, umieszczenie towaru w magazynie mroźni, 
+2. Ustalenie Harmonogramu lifofilizacji na jednej z siedmiu maszyn. 
+3. Proces liofilizacji, wyjecie towaru z magazynu mroźni i przerzucenie do magazynu półfabrykatu po zakończeniu, 
+4. Nadanie frakcji do odpowieniej partii liofilizowanej, 
+5. Pobranie surowca z magazynu półfabrykatu do kontroli jakości (wprowadzenie strat na surowcu), 
+6. przerzucenie do magazynu produktów gotowych, 
+7. Obsługa zamówień. Aplikacja posiada 4 magazyny (mroznia, polfabrykat, gotowy-produkt, kartony), mozliwość tworzenia nowych uzytkownikow oraz nadawania mu dostepow do odpowiednich zakladek.
+
+Stack Technologiczny:
+- Nextjs 
+- React 
+- typescript 
+- shadcn
+
+Styl kodowania:
+- Stosuj zasady DRY oraz modularność.    
+- Dbaj o czytelność i zrozumiałość kodu.    
+- Pamiętaj o aktualnych standardach i best practices w programowaniu.
+
+Schetam dzialania aplikacji wyglada tak, że:
+1. Przyjezdza surowiec i nadajemy mu numer xx/yy/zzzz - numer/miesiac/rok przyjecia, jest przypisywany tutaj dostawca, odbiorca, jaki to produkt oraz waga, przy przyjeciu tej dostawy caly produkt jest odrazu przeniesiony do magazynu mrozni.
+2. Teraz proces ustalania harmonogramu - wyswietlane sa ostatnie dostawy, wybieramy maszyne oraz dostawe (numer partii) wybieramy date rozpoczecia i zakonczenia procesu liofilizacji. Po dodaniu procesu jest ona ponizej wyswietlana.
+3. W tym kroku dostawa jest wyswietlana na wykresie... pracownik wpisuje tutaj wage wprowadzonego surowca (nie musi to byc calosc) data rozpoczecia procesu, proces trwa i po zakonczeniu pracownik wprowadza wage produktu ktory wyszedl w procesie oraz date zakonczenia. (daty moga byc inne niz te podczas tworzenia harmonogramu bo proces mogl sie opoznic lub przedluzyc)
+po zakonczonym oprocesie jest wyliczana sucha masa oraz przeniesiona do magazynu polfabrykatu.
+4. Teraz wybierana jest partia, frakcja oraz ilosc ktora bedzie przetworzona na ta frakcje. W magazynie polfabrykatu wyswietlana jest dodatkowo w numerze partii frakcja oraz waga tej frakcji.
+5. Kontrola jakości, czyli pobierany jest numer parti wraz z frakcja i wage oraz poddany testowi jakości, wpisywana jest masa ktora zostala oraz przypisana do partii waga odpadow. Przeniesienie z magazynu polfabrykatu do magazynu gotowych produktow.
+6. Partia czeka w magazynie na obsluge zamowienia. 
